@@ -24,7 +24,7 @@
 
 #### Date 2022_8_30
 + Achieve `/help`
-+ Achieve `/roll`
++ Achieve `/roll` 
 
 ## Plan
 #### Hukemon
