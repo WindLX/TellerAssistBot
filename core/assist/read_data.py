@@ -1,5 +1,6 @@
 import os
 import json
+import pandas as pd
 
 ### core.json
 # get token
@@ -33,5 +34,8 @@ def load_help():
         data = f.readlines()
     return data
 
-
+### horse.csv
+# get horse data
+def load_horse():
+    return pd.read_csv(os.getcwd() + '/core/assist/config/horse.csv')
     

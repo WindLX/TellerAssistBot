@@ -1,5 +1,6 @@
 import datetime
-from core.assist.read_data import load_help, load_information, load_tarrow
+import pandas as pd
+from core.assist.read_data import load_help, load_information, load_tarrow, load_str2emoji
 from khl.card import Card, Module, Element, CardMessage, Color, Types, Struct
 
 def create_help_card():
@@ -43,4 +44,26 @@ def create_div_card(num: int, name: str):
     last_line = data[1] + " Just for fun, don't be serious."
     card.append(Module.Context(last_line))
 
+    return CardMessage(card)
+
+def create_hrace_card(hd: pd.DataFrame):
+    title = Module.Header("Horse Race")
+    at = "Choose one horse below and it will fight for you then."
+    bt = [
+            str(load_str2emoji(0, str(i))) + " **"
+             + str(hd.iloc[i, 0]) + "**     " 
+             + str(hd.iloc[i, 1])
+             for i in range(4)
+        ]
+    bm = [Module.Section(Element.Text(content=bt[i], type=Types.Text.KMD), Element.Button("+ 1", value=str(i))) for i in range(4)]
+
+    card = Card(title)
+    card.append(Module.Divider())
+    card.append(Module.Section(Element.Text(content=at, type=Types.Text.KMD)))
+    for i in range(4):
+        card.append(bm[i])
+    card.append(Module.Countdown(mode=Types.CountdownMode.SECOND, start=datetime.datetime.now(), end=datetime.datetime.now()+datetime.timedelta(seconds=30)))
+    card.append(Module.Divider())
+    last_line = ":horse: Rush! Rush! Rush!"
+    card.append(Module.Context(last_line))
     return CardMessage(card)
