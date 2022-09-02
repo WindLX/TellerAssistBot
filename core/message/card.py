@@ -56,14 +56,30 @@ def create_hrace_card(hd: pd.DataFrame):
              for i in range(4)
         ]
     bm = [Module.Section(Element.Text(content=bt[i], type=Types.Text.KMD), Element.Button("+ 1", value=str(i))) for i in range(4)]
+    end_t = datetime.datetime.now()+datetime.timedelta(seconds=20)
 
     card = Card(title)
+    card.append(Module.Countdown(mode=Types.CountdownMode.SECOND, start=datetime.datetime.now(), end=end_t))
     card.append(Module.Divider())
     card.append(Module.Section(Element.Text(content=at, type=Types.Text.KMD)))
     for i in range(4):
         card.append(bm[i])
-    card.append(Module.Countdown(mode=Types.CountdownMode.SECOND, start=datetime.datetime.now(), end=datetime.datetime.now()+datetime.timedelta(seconds=30)))
     card.append(Module.Divider())
     last_line = ":horse: Rush! Rush! Rush!"
     card.append(Module.Context(last_line))
+    return CardMessage(card), end_t
+
+def draw_hrace_card(map: list, ct: list):
+    title = Module.Header("Horse Race Status")
+    am = []
+    for i in range(len(map)):
+        am.append(Module.Section(Element.Text(content=map[i], type=Types.Text.KMD)))
+        am.append(Module.Divider())
+    for e in ct:
+        am.append(Module.Section(Element.Text(content=e, type=Types.Text.KMD)))
+
+    card = Card(title)
+    for ele in am:
+        card.append(ele)
+
     return CardMessage(card)

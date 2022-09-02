@@ -7,9 +7,13 @@ There are some of my instructions.
     Get time.
 > `/runtime`
     Know how long I've been working for.
+> `/exit`
+    Stop my work.
 > `/hello {is_secret}`
     Say hello to me!     
 > `/roll {lower_bound} {upper_bound} {times} {is_secret}`
     I'll roll *times* dice between *lower_bound* and *upper_bound* for you, enjoy it!
 > `/divine {is_secret}`
     Tell your fortune today.
+> `/hrace`
+    Let's have a horse race!

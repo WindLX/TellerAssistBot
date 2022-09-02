@@ -1,6 +1,9 @@
 import time
+import datetime
 import random
 import pandas as pd
+
+from khl import Channel
 from core.assist.read_data import load_horse, load_str2emoji
 
 
@@ -23,6 +26,7 @@ class HorseRace(object):
     game_state: list
     content: list
     map: list
+    is_end: bool
 
     def __init__(self):
         self.horse_dict = load_horse().sample(n=4, axis=0)
@@ -30,6 +34,8 @@ class HorseRace(object):
         self.game_state = [0] * 4
         self.content = []
         self.map = []
+        self.draw_map()
+        self.is_end = False
 
     def add_player(self, player_name:str, horse_name:str):
         self.player_dict.update({player_name: horse_name})
@@ -49,17 +55,18 @@ class HorseRace(object):
                 self.game_state[i] = 0
             if self.game_state[i] >= 10:
                 self.game_state[i] = 10
-                return True
-        return False
+                self.is_end = True
+                return
 
-    def jud_game(self):
-        self.content = []
+    def jud_winner(self):
+        d = []
         for i in range(len(self.game_state)):
             if self.game_state[i] == 10:
-                self.content.append(str(self.horse_dict.iloc[i, 0]) + " wins the race!")
-        return
+                d.append(str(self.horse_dict.iloc[i, 0]))                
+        return d
 
     def draw_map(self):
+        self.map = []
         line = ""
         road = " " * 50
         for i in range(5):

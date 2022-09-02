@@ -1,10 +1,11 @@
 import time
 import datetime
 import random
+import asyncio
 
 from core.bot import bot, env
 from core.assist.read_data import load_information, load_str2emoji
-from core.message.card import create_help_card, create_div_card, create_hrace_card
+from core.message.card import create_help_card, create_div_card, create_hrace_card, draw_hrace_card
 from core.game.horse_race import HorseRace
 
 from khl import Bot
@@ -53,6 +54,16 @@ async def get_time(msg: Message):
     content = ":alarm_clock: " + str(now_t)
     await msg.reply(content)
 
+# /exit
+@bot.command(name='exit')
+async def bot_exit(msg: Message):
+    await msg.ctx.channel.send(":kissing_heart: See you next time~")
+    tasks = asyncio.Task.all_tasks()
+    group = asyncio.gather(*tasks, return_exceptions=True)
+    group.cancel()
+    bot.loop.run_until_complete(group)
+    bot.loop.close()
+
 ### game ###
 # /roll
 @bot.command(name="roll")
@@ -91,42 +102,49 @@ async def divine(msg: Message, is_secret: int = 0):
 @bot.command(name="hrace")
 async def horse_race(msg: Message):
     if env.game_state == False:
-        env.game = HorseRace()
-        env.game_state = True
-        content = create_hrace_card(env.game.horse_dict)
+        env.start_game(HorseRace())
+        content, end_t = create_hrace_card(env.game.horse_dict)
+        ct = draw_hrace_card(env.game.map, env.game.content)
+        
         await msg.ctx.channel.send(content)
+        env.game_sign.update({"end_t": end_t})
+        time.sleep((end_t - datetime.datetime.now()).total_seconds())
+        await msg.ctx.channel.send(ct)
+        time.sleep(3)
+
+        while True:
+            env.game.update_state()
+            env.game.draw_map()
+            ct = draw_hrace_card(env.game.map, env.game.content)
+            await msg.ctx.channel.send(ct)
+            time.sleep(3)
+            if env.game.is_end:
+                break
+            
+        d = env.game.jud_winner()
+        for ele in d:
+            ct = f":partying_face: {ele} wins the race! "
+            for key, value in env.game.player_dict.items():
+                if value == ele:
+                    ct += f"@{key} "
+            time.sleep(1)
+        await msg.ctx.channel.send(ct)
+        env.end_game()
     else:
         await msg.reply(":cold_sweat: I'm sorry, a game has begun")
-    # hr = HorseRace()
-    # while not hr.update_state():
-    #     hr.update_state()
-    #     hr.draw_map()
-    #     cn = ""
-    #     for e in hr.map:
-    #         cn += e + "\n"
-    #     await msg.ctx.channel.send(cn)
-    #     time.sleep(5)
-# Listen to msg_add event
-
-@bot.on_event(EventTypes.UPDATED_MESSAGE)
-async def listen_new_msg(b: Bot, event: Event):
-    env.msg_dq.append(event._msg_id)
-    channel = await b.fetch_public_channel(event.body['channel_id'])
-    await b.send(channel, f'msg {event.body["msg_id"]} was updated at')
 
 # Handle the +1 to the horse race
 @bot.on_event(EventTypes.MESSAGE_BTN_CLICK)
 async def hrace_plus(b: Bot, event: Event):
     channel = await b.fetch_public_channel(event.body['target_id'])
-    if env.game_state == True and isinstance(env.game, HorseRace):
+    if env.game_state == True and isinstance(env.game, HorseRace) and (datetime.datetime.now() - env.game_sign["end_t"]).total_seconds() > 0:
         user_name = event.body['user_info']['username']
         horse_name = env.game.horse_dict.iloc[int(event.body['value']), 0]
-        env.game.add_player(user_name, horse_name)
-        await b.send(channel, f'@{user_name} chooses {horse_name}')
+        if not user_name in env.game.player_dict:
+            env.game.add_player(user_name, horse_name)
+            await b.send(channel, f'@{user_name} chooses {horse_name}')
+    elif (datetime.datetime.now() - env.game_sign["end_t"]).total_seconds() < 0:
+        await b.send(channel, 'Sorry, the game started.')
     else:
         await b.send(channel, 'Sorry, the game finished.')
 
-
-
-# # TODO:Handle the countdown to the horse race
-# @bot.on_event(EventTypes.)

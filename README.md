@@ -1,6 +1,6 @@
 # TellerAssistBot
 ## Information
-#### Version *0.0.4*
+#### Version *0.0.6*
 
 #### Introduction
 + An auxiliary robot with bloody clock tower
@@ -37,9 +37,17 @@
 #### Date 2022_9_1
 + Achieve `/divine`
 
+#### Date 2022_9_2
++ Achieve `/exit`
++ Achieve `/hrace`
 ## Plan
 #### Hukemon
 
-#### Tiger Race
-
 #### Bloody Clock Tower
+
+#### Music
+
+#### News
+
+
+#### GameState
