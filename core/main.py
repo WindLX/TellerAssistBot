@@ -5,8 +5,9 @@ import asyncio
 
 from core.bot import bot, env
 from core.assist.read_data import load_information, load_str2emoji
-from core.message.card import create_help_card, create_div_card, create_hrace_card, draw_hrace_card
+from core.message.card import create_help_card, create_div_card, create_hrace_card, draw_hrace_card, create_fguess_card
 from core.game.horse_race import HorseRace
+from core.game.finger_guess import FingerGuess, ActionTypes
 
 from khl import Bot
 from khl import Message
@@ -66,7 +67,7 @@ async def bot_exit(msg: Message):
 
 ### game ###
 # /roll
-@bot.command(name="roll")
+@bot.command(name="roll", prefixes=['.'])
 async def roll(msg: Message, t_min: int, t_max: int, n: int = 1, is_secret: int = 0):
     if is_secret == 1:
         is_secret = True
@@ -84,7 +85,7 @@ async def roll(msg: Message, t_min: int, t_max: int, n: int = 1, is_secret: int 
         await msg.reply(f':partying_face: You got: {result}', is_temp=is_secret)
 
 # /divine
-@bot.command(name="divine")
+@bot.command(name="divine", prefixes=['.'])
 async def divine(msg: Message, is_secret: int = 0):
     if is_secret == 1:
         is_secret = True
@@ -99,17 +100,18 @@ async def divine(msg: Message, is_secret: int = 0):
     await msg.reply(content=content, is_temp=is_secret)
 
 # /horse race
-@bot.command(name="hrace")
+@bot.command(name="hrace", prefixes=['.'])
 async def horse_race(msg: Message):
     if env.game_state == False:
         env.start_game(HorseRace())
+        env.add_game_sign("is_running", False)
         content, end_t = create_hrace_card(env.game.horse_dict)
         ct = draw_hrace_card(env.game.map, env.game.content)
         
         await msg.ctx.channel.send(content)
-        env.game_sign.update({"end_t": end_t})
         time.sleep((end_t - datetime.datetime.now()).total_seconds())
         await msg.ctx.channel.send(ct)
+        env.add_game_sign("is_running", True)
         time.sleep(3)
 
         while True:
@@ -127,9 +129,28 @@ async def horse_race(msg: Message):
             for key, value in env.game.player_dict.items():
                 if value == ele:
                     ct += f"@{key} "
-            time.sleep(1)
         await msg.ctx.channel.send(ct)
         env.end_game()
+    else:
+        await msg.reply(":cold_sweat: I'm sorry, a game has begun")
+
+# /finger-guessing
+@bot.command(name='fguess', prefixes=['.'])
+async def finger_guess(msg: Message):
+    if env.game_state == False:
+        env.start_game(FingerGuess())
+        env.add_game_sign("msg_id", msg.id)
+        env.add_game_sign("u_name", msg.author.username)
+        u_info = [msg.author.id, msg.author.username, msg.author.avatar]
+        bot_all_info = await bot.client.fetch_me(True)
+        b_info = [bot_all_info.id, bot_all_info.username, bot_all_info.avatar]
+        env.add_game_sign("b_name", bot_all_info.username)
+        cm = create_fguess_card(bot_info=b_info, player_info=u_info)
+        env.game.add_player(u_info)
+        await msg.ctx.channel.send(cm)
+        await bot.client.add_reaction(msg, "✌")
+        await bot.client.add_reaction(msg, "👊")
+        await bot.client.add_reaction(msg, "🖐")
     else:
         await msg.reply(":cold_sweat: I'm sorry, a game has begun")
 
@@ -137,14 +158,49 @@ async def horse_race(msg: Message):
 @bot.on_event(EventTypes.MESSAGE_BTN_CLICK)
 async def hrace_plus(b: Bot, event: Event):
     channel = await b.fetch_public_channel(event.body['target_id'])
-    if env.game_state == True and isinstance(env.game, HorseRace) and (datetime.datetime.now() - env.game_sign["end_t"]).total_seconds() > 0:
+    if env.game_state == True and isinstance(env.game, HorseRace) and env.game_sign["is_running"] == False:
         user_name = event.body['user_info']['username']
         horse_name = env.game.horse_dict.iloc[int(event.body['value']), 0]
         if not user_name in env.game.player_dict:
             env.game.add_player(user_name, horse_name)
-            await b.send(channel, f'@{user_name} chooses {horse_name}')
-    elif (datetime.datetime.now() - env.game_sign["end_t"]).total_seconds() < 0:
-        await b.send(channel, 'Sorry, the game started.')
+            await b.client.send(channel, f'@{user_name} chooses {horse_name}')
+    elif env.game_sign["is_running"] == True:
+        await b.client.send(channel, 'Sorry, the game started.')
     else:
-        await b.send(channel, 'Sorry, the game finished.')
+        await b.client.send(channel, 'Sorry, the game finished.')
 
+# Handle the reaction in finger-guessing
+@bot.on_event(EventTypes.ADDED_REACTION)
+async def fguess_reaction(b: Bot, event: Event):
+    if env.game_state:
+        if event.body['msg_id'] == env.game_sign['msg_id'] and event.body['user_id'] == env.game.player_dict['id']:
+            channel = await b.fetch_public_channel(event.body['channel_id'])
+            if event.body["emoji"]["name"] == "✌":
+                dm = "✌"
+                env.game.update_state(ActionTypes.scissors)
+            elif event.body["emoji"]["name"] == "👊":
+                dm = "👊"
+                env.game.update_state(ActionTypes.stone)
+            elif event.body["emoji"]["name"] == "🖐":
+                dm = "🖐"
+                env.game.update_state(ActionTypes.paper)
+            else:
+                return
+            r = env.game.jud_winner()
+            am = env.game_sign["b_name"]
+            cm = env.game_sign["u_name"]
+            m = env.game.game_state[0]
+            if m == ActionTypes.scissors:
+                bm = "✌"
+            elif m == ActionTypes.paper:
+                bm = "🖐"
+            else:
+                bm = "👊"
+            await b.client.send(channel, f"{am} choose {bm}, {cm} choose {dm}.")
+            if r == 0:
+                await b.client.send(channel, f":partying_face: Winner is {am}!")
+            elif r == 1:
+                await b.client.send(channel, f":partying_face: Winner is {cm}!")
+            else:
+                await b.client.send(channel, ":partying_face: We're tied~")
+            env.end_game()

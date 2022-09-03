@@ -56,7 +56,7 @@ def create_hrace_card(hd: pd.DataFrame):
              for i in range(4)
         ]
     bm = [Module.Section(Element.Text(content=bt[i], type=Types.Text.KMD), Element.Button("+ 1", value=str(i))) for i in range(4)]
-    end_t = datetime.datetime.now()+datetime.timedelta(seconds=20)
+    end_t = datetime.datetime.now() + datetime.timedelta(seconds=20)
 
     card = Card(title)
     card.append(Module.Countdown(mode=Types.CountdownMode.SECOND, start=datetime.datetime.now(), end=end_t))
@@ -83,3 +83,25 @@ def draw_hrace_card(map: list, ct: list):
         card.append(ele)
 
     return CardMessage(card)
+
+def create_fguess_card(bot_info: list, player_info: list):
+    title = Module.Header("Finger-Guessing")
+    am = Module.Section(Element.Text(content=f"   {bot_info[1]}"), accessory=Element.Image(src=bot_info[2], circle=True, size=Types.Size.SM), mode=Types.SectionMode.LEFT)
+    bm = Module.Section(Element.Text(content=f"   {player_info[1]}"), Element.Image(src=player_info[2], circle=True, size=Types.Size.SM), mode=Types.SectionMode.LEFT)
+    cm = Module.Section(Element.Text(content="  **V S**", type=Types.Text.KMD))
+    dm = Module.Section(Element.Text(content="Add reaction from emoji below to your cmd which represents your action.", type=Types.Text.KMD))
+    em = Module.Section(Element.Text(content="  :v:     :punch:     :raised_hand_with_fingers_splayed:", type=Types.Text.KMD))
+
+    card = Card(title)
+    card.append(Module.Divider())
+    card.append(dm)
+    card.append(em)
+    card.append(am)
+    card.append(cm)
+    card.append(bm)
+    last_line = ":clown_face: A boring designer"
+    card.append(Module.Context(last_line))
+
+    return CardMessage(card)
+
+    
